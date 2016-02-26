@@ -1,0 +1,396 @@
+import java.awt.*;
+import java.awt.image.*;
+import java.io.*;
+import javax.swing.*;
+
+
+public class imageReader {
+
+  
+   public static void main(String[] args) 
+   {
+   	
+
+	String fileName = args[0];
+	int Ys = Integer.parseInt(args[1]);
+	int Us = Integer.parseInt(args[2]);
+	int Vs = Integer.parseInt(args[3]);
+	int Qu = Integer.parseInt(args[4]);
+   	int width = 352;
+	int height = 288;
+	
+    BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+	BufferedImage img_out = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+	
+	int hw = (height*width)+1;
+	
+	int[] R = new int[(int)hw];
+	int[] G = new int[(int)hw];
+	int[] B = new int[(int)hw];
+	
+    try {
+	    File file = new File(args[0]);
+	    InputStream is = new FileInputStream(file);
+
+	    long len = file.length();
+		System.out.println("Length: " +len);
+	    byte[] bytes = new byte[(int)len];
+	
+	    
+	    int offset = 0;
+        int numRead = 0;
+		
+        while (offset < bytes.length && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
+			offset += numRead;
+        }		
+		
+    	int ind = 0;
+		for(int y = 0; y < height; y++){
+	
+			for(int x = 0; x < width; x++){
+		 
+				//byte a = 0;
+				byte r = bytes[ind];
+				byte g = bytes[ind+height*width];
+				byte b = bytes[ind+height*width*2]; 
+				
+				if(r<0)
+				{
+					R[ind] = (int)(r & 0xff);
+				}else{ 	
+					R[ind] = r;
+				}
+				if(g<0)
+				{
+					G[ind] = (int)(g & 0xff);
+				}else{ 	
+					G[ind] = g;
+				}
+				if(b<0)
+				{
+					B[ind] = (int)(b & 0xff);
+				}else{ 	
+					B[ind] = b;
+				}
+				
+				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+				//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+				img.setRGB(x,y,pix);
+				ind++;
+			}
+		}//System.out.println("Index: " +ind);System.out.println("RED Count: " +coutred);
+		
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+	
+	/*-----------------------------------------------------------------------*/
+	
+	//RGB to YUV Conversion
+	double[] Y = new double[(int)hw];
+	double[] U = new double[(int)hw];
+	double[] V = new double[(int)hw];
+	
+	for (int i = 0; i<hw; i++)
+	{	
+		Y[i] =  0.299*R[i] + 0.587*G[i] + 0.114*B[i];
+		U[i] = -0.147*R[i] - 0.289*G[i] + 0.436*B[i];
+		V[i] =  0.615*R[i] - 0.515*G[i] - 0.100*B[i];	
+    }
+	/*---------------------------------------------------------------------*/
+	
+	//Down sampling of YUV
+		
+	double[] Y_DS = new double[(int)hw];
+	double[] U_DS = new double[(int)hw];
+	double[] V_DS = new double[(int)hw];
+	
+	if(Ys!=1)
+	{	
+		int samples;
+		int k = 0;
+		if(((hw-1)%Ys)==0)
+		{
+			samples = (hw-1)/Ys;
+		}else
+		{
+			samples = ((hw-1)/Ys) + 1;
+		}
+		for(int i = 0; i<samples ; i++)
+			{
+				Y_DS[i] = Y[k];
+				k = k+Ys;
+			}
+	}else
+	{
+		for (int i = 0; i<hw; i++)
+		{
+			Y_DS[i] = Y[i];
+		}
+	}
+	
+	if(Us!=1)
+	{	
+		int samples;
+		int k = 0;
+		if(((hw-1)%Us)==0)
+		{
+			samples = (hw-1)/Us;
+		}else
+		{
+			samples = ((hw-1)/Us) + 1;
+		}
+		for(int i = 0; i<samples ; i++)
+			{
+				U_DS[i] = U[k];
+				k = k+Us;
+			}
+	}else
+	{
+		for (int i = 0; i<hw; i++)
+		{
+			U_DS[i] = U[i];
+		}
+	}
+	
+	if(Vs!=1)
+	{	
+		int samples;
+		int k = 0;
+		if(((hw-1)%Vs)==0)
+		{
+			samples = (hw-1)/Vs;
+		}else
+		{
+			samples = ((hw-1)/Vs) + 1;
+		}
+		for(int i = 0; i<samples ; i++)
+			{
+				V_DS[i] = V[k];
+				k = k+Vs;
+			}
+	}else
+	{
+		for (int i = 0; i<hw; i++)
+		{
+			V_DS[i] = V[i];
+		}
+	}
+	
+	/*---------------------------------------------------------------*/
+	//Up sampling of YUV
+	double[] Y_US = new double[(int)hw];
+	double[] U_US = new double[(int)hw];
+	double[] V_US = new double[(int)hw];
+	
+	if(Ys!=1)
+	{
+		int k = 0, i = 0;
+		Y_US[i] = Y_DS[i];
+		i++;
+		while(i < hw)
+			{
+				int count = 0;
+				while((count < (Ys-1)) && i<(hw-1))
+				{
+					count++;
+					Y_US[i] = Y_DS[k]*((Ys-count)/Ys) + Y_DS[k+1]*((count)/Ys); 
+					i++;
+				}
+				k++;
+				Y_US[i] = Y_DS[i];
+				i++;
+			}
+	}else
+	{
+		for (int i = 0; i<hw; i++)
+		{
+			Y_US[i] = Y_DS[i];
+		}
+	}
+	
+	if(Us!=1)
+	{
+		int k = 0, i = 0;
+		U_US[i] = U_DS[i];
+		i++;
+		while(i < hw)
+			{
+				int count = 0;
+				while(count < (Us-1) && i<(hw-1))
+				{
+					count++;
+					U_US[i] = U_DS[k]*((Us-count)/Us) + U_DS[k+1]*((count)/Us); 
+					i++;
+				}
+				k++;
+				U_US[i] = U_DS[i];
+				i++;
+			}
+	}else
+	{
+		for (int i = 0; i<hw; i++)
+		{
+			U_US[i] = U_DS[i];
+		}
+	}
+	
+	if(Vs!=1)
+	{
+		int k = 0, i = 0;
+		V_US[i] = V_DS[i];
+		i++;
+		while(i < hw)
+			{
+				int count = 0;
+				while(count < (Vs-1) && i<(hw-1))
+				{
+					count++;
+					V_US[i] = V_DS[k]*((Vs-count)/Vs) + V_DS[k+1]*((count)/Vs); 
+					i++;
+				}
+				k++;
+				V_US[i] = V_DS[i];
+				i++;
+			}
+	}else
+	{
+		for (int i = 0; i<hw; i++)
+		{
+			V_US[i] = V_DS[i];
+		}
+	}
+	
+	/*---------------------------------------------------------------*/
+	// YUV to RGB conversion
+	double[] R_itm = new double[(int)hw];
+	double[] G_itm = new double[(int)hw];
+	double[] B_itm = new double[(int)hw];
+	
+	/* byte[] R1 = new byte[(int)hw];
+	byte[] G1 = new byte[(int)hw];
+	byte[] B1 = new byte[(int)hw]; */
+	
+	for (int i = 0; i<hw; i++)
+	{	
+		R_itm[i] =  0.999*Y_US[i] + 0.000*U_US[i] + 1.140*V_US[i];
+		G_itm[i] = 	1.000*Y_US[i] - 0.395*U_US[i] - 0.581*V_US[i];
+		B_itm[i] =  1.000*Y_US[i] + 2.032*U_US[i] - 0.000*V_US[i];	
+    }
+	
+	for (int i = 0; i<hw; i++)
+	{	
+		R[i] = (int) R_itm[i];
+		
+		if(R[i]<0){
+		R[i] = (int)(R[i]+256);
+		}
+		G[i] = (int) G_itm[i];
+		if(G[i]<0){
+		G[i] = (int) (G[i]+256);
+		}
+		B[i] = (int) B_itm[i];
+		if(B[i]<0){
+		B[i] = (int) (B[i]+256);
+		}
+    }
+	
+	/*---------------------------------------------------------------*/
+	//Quantisation
+	
+	/* int Q_lvl = (int)(256/Qu);
+	int[] lookup = new int [hw];
+	
+	lookup[0] = 0;
+	lookup[1] = Q_lvl-1;
+	int k = 2;
+	int value = 0;
+	while(value <= (255-Q_lvl))
+	{
+		lookup[k] = lookup[k-1]+Q_lvl;
+		value = lookup[k];
+		k++;
+	}
+	
+	for(int i = 0; i<hw; i++)
+	{	
+		int j = 1;
+		while(lookup[j]<R[i])
+		{	
+			if(j<hw-2)
+				j++;
+			else
+				break;
+		}
+		R[i] = (byte)lookup[j-1];
+		
+	}
+	
+	for(int i = 0; i<hw; i++)
+	{	
+		int j = 1;
+		while(lookup[j]<G[i])
+		{
+			if(j<hw-2)
+				j++;
+			else
+				break;
+		}
+		G[i] = (byte)lookup[j-1];
+		
+	}
+	
+	for(int i = 0; i<hw; i++)
+	{	
+		int j = 1;
+		while(lookup[j]<B[i])
+		{
+			if(j<hw-2)
+				j++;
+			else
+				break;
+		}
+		B[i] = (byte)lookup[j-1];
+		
+	} */
+	
+	/*---------------------------------------------------------------*/
+	
+	// Dispaly image
+	int ind = 0;
+	for(int y = 0; y < height; y++){
+	
+			for(int x = 0; x < width; x++){
+		 
+				//byte a = 0;
+				byte r = (byte) R[ind];
+				byte g = (byte) G[ind];
+				byte b = (byte) B[ind]; 
+				
+				int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+				//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+				img_out.setRGB(x,y,pix);
+				ind++;
+			}
+		}
+	
+	
+	/*---------------------------------------------------------------*/
+   
+   // Use a panel and label to display the image
+    JPanel  panel = new JPanel ();
+    panel.add (new JLabel (new ImageIcon (img)));
+    panel.add (new JLabel (new ImageIcon (img_out)));
+    
+    JFrame frame = new JFrame("Display images");
+    
+    frame.getContentPane().add (panel);
+    frame.pack();
+    frame.setVisible(true);
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);   
+
+   }
+  
+}
