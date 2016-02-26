@@ -1,0 +1,37 @@
+Assignment 3 Report
+
+Name: Chandan Basavaraju
+USCID: 4431946010
+
+1. What I turned in, what it does, and how to run it
+
+test_data.py - This file was used to generate baseline test data in a suitabe format for crfsuite
+test_data_advanced.py - This file was used to generate advanced test data in a suitabe format for crfsuite
+
+To run these files, open them and replace the path in the file with the path of the folder containing the test csv files.(These need not be run, these were used by me for generating test data in suitable crfsuite format)
+
+2. How I evaluated my baseline and advanced features
+
+Labeled data was split into 80% and 20%, i.e 861 .csv files were used for learning and generating a model for both baseline and advanced features and rest of the .csv files were used for testing based on the model from 80% data.
+Also complete data was used to generate baseline and advanced model.
+
+3. Description of advanced feature set
+
+Advanced feature set consists bigrams of token and parts of speach(pos) tag. The current word and the next word were associated with weghts 0 and 1 and used as a feature of the utterance. Also trigram of pos tag is being done. This involves combining 3 consecutive pos tags to form one feature in a utterance.
+
+4. How I developed my advanced feature set
+
+In a conversation the words being said will have some kind of realation with what the previous said word was, hence initial expermient was carried out combining two tokens and pos. Trigram was developed based on similar logic but only pos was used to limit the features file size. 
+
+5. Results
+
+By generating a model using 80% of the data and using rest 20% to test, below resuts were obtained
+
+Accuracy of baseline features: 76.22%
+Accuracy of advanced features: 86.41%
+
+
+6. Additional information about the assignment
+
+Not applicable
+
